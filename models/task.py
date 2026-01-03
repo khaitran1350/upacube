@@ -1,14 +1,17 @@
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 @dataclass
 class Task:
     id: int
     title: str
+    description: str = ""
+    deadline: Optional[str] = None
+    priority: str = "Normal"
     completed: bool = False
-    created_at: str | None = None
+    created_at: Optional[str] = None
 
     def __post_init__(self):
         if self.created_at is None:
@@ -23,6 +26,9 @@ class Task:
         return Task(
             id=int(d.get("id", 0)),
             title=str(d.get("title", "")),
+            description=str(d.get("description", "")),
+            deadline=d.get("deadline"),
+            priority=str(d.get("priority", "Normal")),
             completed=bool(d.get("completed", False)),
             created_at=d.get("created_at"),
         )

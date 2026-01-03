@@ -1,224 +1,108 @@
 """
-Main View - Task manager UI
+Main View - Application container with page navigation
 """
-from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLineEdit, QLabel, QListWidget, QTextEdit, QListWidgetItem
-)
-from PyQt6.QtCore import pyqtSignal, Qt
-from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QMainWindow, QStackedWidget
+from PyQt6.QtCore import pyqtSignal
+
+from .home_view import HomeView
+from .task_view import TaskView
 
 
 class MainView(QMainWindow):
     """
-    Main application window (View).
-    Contains UI elements and emits signals for user actions.
+    Main application window that manages navigation between pages.
+    Uses QStackedWidget to switch between Home and Task views.
     """
 
-    # Signals for user actions
-    add_task_requested = pyqtSignal(str)   # payload: title
+    # Forward signals from TaskView for controller
+    add_task_requested = pyqtSignal(object)   # payload: dict or title
     toggle_task_requested = pyqtSignal(int)  # payload: index
     remove_task_requested = pyqtSignal(int)  # payload: index
-    process_requested = pyqtSignal()
     clear_requested = pyqtSignal()
 
     def __init__(self):
         super().__init__()
-        self._suppress_item_change = False
         self.init_ui()
 
+
     def init_ui(self):
-        """Initialize the user interface"""
-        self.setWindowTitle("Task Manager - PyQt MVC")
-        self.setGeometry(100, 100, 600, 450)
+        """Initialize the main window with page navigation"""
+        self.setWindowTitle("UpaCube - Task Manager")
+        self.setGeometry(100, 100, 700, 550)
 
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout = QVBoxLayout(central_widget)
+        # Create stacked widget to hold different pages
+        self.stacked_widget = QStackedWidget()
+        self.setCentralWidget(self.stacked_widget)
 
-        title_label = QLabel("Task Manager")
-        title_label.setStyleSheet("font-size: 18px; font-weight: bold; padding: 10px;")
-        main_layout.addWidget(title_label)
+        # Create pages
+        self.home_view = HomeView()
+        self.task_view = TaskView()
 
-        # Input row
-        input_layout = QHBoxLayout()
-        self.input_field = QLineEdit()
-        self.input_field.setPlaceholderText("Enter new task title...")
-        self.add_button = QPushButton("Add Task")
-        input_layout.addWidget(self.input_field)
-        input_layout.addWidget(self.add_button)
-        main_layout.addLayout(input_layout)
+        # Add pages to stack
+        self.stacked_widget.addWidget(self.home_view)  # index 0
+        self.stacked_widget.addWidget(self.task_view)  # index 1
 
-        # Tasks list
-        self.list_widget = QListWidget()
-        main_layout.addWidget(self.list_widget)
-        # listen for checkbox changes (user toggles)
-        self.list_widget.itemChanged.connect(self._on_item_changed)
+        # Connect navigation signals
+        self.home_view.navigate_to_tasks.connect(self.show_task_view)
+        self.task_view.navigate_back.connect(self.show_home_view)
 
-        # Buttons row
-        button_layout = QHBoxLayout()
-        self.process_button = QPushButton("Process")
-        self.toggle_button = QPushButton("Toggle Done")
-        self.remove_button = QPushButton("Remove")
-        self.clear_button = QPushButton("Clear All")
-        button_layout.addWidget(self.process_button)
-        button_layout.addWidget(self.toggle_button)
-        button_layout.addWidget(self.remove_button)
-        button_layout.addWidget(self.clear_button)
-        main_layout.addLayout(button_layout)
+        # Forward task view signals to controller
+        self.task_view.add_task_requested.connect(self.add_task_requested.emit)
+        self.task_view.toggle_task_requested.connect(self.toggle_task_requested.emit)
+        self.task_view.remove_task_requested.connect(self.remove_task_requested.emit)
+        self.task_view.clear_requested.connect(self.clear_requested.emit)
 
-        # Status area
-        self.status_text = QTextEdit()
-        self.status_text.setReadOnly(True)
-        self.status_text.setMaximumHeight(120)
-        main_layout.addWidget(self.status_text)
+        # Start on home page
+        self.show_home_view()
 
-        # Connect UI actions
-        self.add_button.clicked.connect(self._on_add_clicked)
-        self.input_field.returnPressed.connect(self._on_add_clicked)
-        # Use lambdas to avoid passing the clicked(bool) argument into signal.emit
-        self.process_button.clicked.connect(lambda checked=False: self.process_requested.emit())
-        # toggle/remove call internal handlers which accept optional checked param
-        self.toggle_button.clicked.connect(self._on_toggle_clicked)
-        self.remove_button.clicked.connect(self._on_remove_clicked)
-        self.clear_button.clicked.connect(lambda checked=False: self.clear_requested.emit())
+        # Apply global theme
+        self.apply_global_theme()
 
-        # Apply the preferred theme
-        self.apply_light_theme()
+    # --- Navigation methods -------------------------------------------
+    def show_home_view(self):
+        """Switch to home page"""
+        self.stacked_widget.setCurrentWidget(self.home_view)
 
-    # --- UI event handlers -------------------------------------------
-    def _on_add_clicked(self, checked=False):
-        title = self.input_field.text()
-        import logging
-        logging.getLogger(__name__).info('ui: add clicked')
-        if title.strip():
-            self.add_task_requested.emit(title.strip())
-            self.input_field.clear()
+    def show_task_view(self):
+        """Switch to task management page"""
+        self.stacked_widget.setCurrentWidget(self.task_view)
 
-    def _on_toggle_clicked(self, checked=False):
-        import logging
-        logging.getLogger(__name__).info('ui: toggle clicked')
-        index = self.current_selected_index()
-        if index is not None:
-            self.toggle_task_requested.emit(index)
-
-    def _on_remove_clicked(self, checked=False):
-        import logging
-        logging.getLogger(__name__).info('ui: remove clicked')
-        index = self.current_selected_index()
-        if index is not None:
-            self.remove_task_requested.emit(index)
-
-    def _on_item_changed(self, item: QListWidgetItem):
-        """Handle checkbox toggles from the user and emit toggle signal.
-
-        This method ignores programmatic changes when `_suppress_item_change` is True.
-        """
-        if self._suppress_item_change:
-            return
-
-        row = self.list_widget.row(item)
-        # emit toggle request for this row
-        if row >= 0:
-            self.toggle_task_requested.emit(row)
-
-    # --- view update methods ---------------------------------------
+    # --- Delegate methods to task_view for controller access ---------
     def update_tasks(self, tasks):
-        """Repopulate the tasks list from model data.
-
-        Accepts either list of dict-like objects (with .get) or Task dataclass instances
-        with attributes `title`, `completed`, and `id`.
-        """
-        # Suppress itemChanged handler while we rebuild the list
-        self._suppress_item_change = True
-        self.list_widget.clear()
-        for t in tasks:
-            # support both dict-like and dataclass-like Task
-            if hasattr(t, "get"):
-                completed = t.get('completed')
-                title = t.get('title')
-                tid = t.get('id')
-            else:
-                # assume object with attributes
-                completed = getattr(t, 'completed', False)
-                title = getattr(t, 'title', str(t))
-                tid = getattr(t, 'id', None)
-
-            # Use a checkbox in the list to represent completion state
-            text = title
-            item = QListWidgetItem(text)
-            # set checkbox state
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
-            if completed:
-                item.setCheckState(Qt.CheckState.Checked)
-            else:
-                item.setCheckState(Qt.CheckState.Unchecked)
-
-            # Visual cues: strike-through and dim color for completed tasks
-            if completed:
-                f = item.font()
-                f.setStrikeOut(True)
-                item.setFont(f)
-                item.setForeground(QColor('#6c6c6c'))
-
-            # store task id in item data for reference (use Qt.UserRole) if available
-            if tid is not None:
-                item.setData(Qt.ItemDataRole.UserRole, tid)
-
-            self.list_widget.addItem(item)
-        self._suppress_item_change = False
+        """Forward to task view"""
+        self.task_view.update_tasks(tasks)
 
     def append_status(self, message):
-        self.status_text.append(message)
+        """Forward to task view"""
+        self.task_view.append_status(message)
 
     def clear_status(self):
-        self.status_text.clear()
+        """Forward to task view"""
+        self.task_view.clear_status()
 
     def current_selected_index(self):
-        row = self.list_widget.currentRow()
-        if row >= 0:
-            return row
-        return None
+        """Forward to task view"""
+        return self.task_view.current_selected_index()
 
     def select_index(self, index: int):
-        if 0 <= index < self.list_widget.count():
-            self.list_widget.setCurrentRow(index)
+        """Forward to task view"""
+        self.task_view.select_index(index)
 
     def clear_list(self):
-        self.list_widget.clear()
+        """Forward to task view"""
+        self.task_view.clear_list()
+
+    # Expose status_text for logging (from task_view)
+    @property
+    def status_text(self):
+        return self.task_view.status_text
 
     # --- Theme ------------------------------------------------------
-    def apply_light_theme(self):
-        """Apply a light theme stylesheet to the main view."""
+    def apply_global_theme(self):
+        """Apply a global theme stylesheet"""
         style = """
-        /* Base colors */
-        QMainWindow, QWidget {
+        QMainWindow {
             background-color: #fafafa;
-            color: #222222;
-            font-family: Segoe UI, Arial, Helvetica, sans-serif;
-            font-size: 12px;
         }
-        QLabel { color: #111111; }
-        QLineEdit, QTextEdit, QListWidget {
-            background-color: #ffffff;
-            color: #111111;
-            border: 1px solid #d0d0d0;
-        }
-        QPushButton {
-            background-color: #f3f6f9;
-            color: #111111;
-            border: 1px solid #cfcfcf;
-            padding: 6px 10px;
-            border-radius: 4px;
-        }
-        QPushButton:hover { background-color: #e9eef5; }
-        QPushButton:pressed { background-color: #dfe9f2; }
-        QListWidget::item:selected {
-            background-color: #d0e7ff;
-            color: #000000;
-        }
-        QTextEdit { background-color: #ffffff; }
-        QScrollBar:vertical { background: #f0f0f0; width: 12px; }
         """
         self.setStyleSheet(style)
-

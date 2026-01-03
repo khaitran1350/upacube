@@ -1,6 +1,6 @@
-# PyQt MVC Project
+# PyQt MVC Project - UpaCube Task Manager
 
-This is a PyQt6 application structured using the MVC (Model-View-Controller) pattern.
+This is a PyQt6 application structured using the MVC (Model-View-Controller) pattern with multi-page navigation.
 
 ## Project Structure
 
@@ -12,16 +12,30 @@ upacube/
 │
 ├── models/                 # Data models and business logic
 │   ├── __init__.py
-│   └── data_model.py      # Example data model
+│   ├── data_model.py      # Task data model with persistence
+│   └── task.py            # Task dataclass
 │
-├── views/                  # UI components
+├── views/                  # UI components (multi-page navigation)
 │   ├── __init__.py
-│   └── main_view.py       # Main window view
+│   ├── main_view.py       # Main window container with QStackedWidget
+│   ├── home_view.py       # Home/landing page
+│   └── task_view.py       # Task management page
 │
-└── controllers/            # Application logic
-    ├── __init__.py
-    └── main_controller.py # Main controller
+├── controllers/            # Application logic
+│   ├── __init__.py
+│   └── main_controller.py # Main controller
+│
+└── utils/                  # Utilities
+    └── logging_qt.py      # Qt logging integration
 ```
+
+## Features
+
+- 🏠 **Multi-page Navigation**: Home page with navigation to task management
+- ✅ **Task Management**: Add, toggle, remove, and process tasks
+- 💾 **Persistence**: Tasks saved to JSON file automatically
+- 📝 **Status Logging**: Real-time status updates and logging
+- 🎨 **Modern UI**: Clean, responsive interface with proper theming
 
 ## MVC Architecture
 
@@ -29,14 +43,17 @@ upacube/
 - Contains data and business logic
 - Independent of the UI
 - Emits signals when data changes
-- Example: `DataModel` class manages application data
+- **DataModel**: Manages tasks with JSON persistence
+- **Task**: Dataclass representing individual tasks
 
 ### View (`views/`)
 - Contains UI components and layout
 - Displays data from the model
 - Emits signals for user actions
 - Should NOT contain business logic
-- Example: `MainView` class with Qt widgets
+- **MainView**: Container that manages page navigation using QStackedWidget
+- **HomeView**: Landing page with welcome message and navigation
+- **TaskView**: Task management interface (add, toggle, remove tasks)
 
 ### Controller (`controllers/`)
 - Connects Model and View
@@ -44,7 +61,21 @@ upacube/
 - Updates Model based on user actions
 - Updates View when Model changes
 - Contains application logic
-- Example: `MainController` class
+- **MainController**: Coordinates between DataModel and Views
+
+## Navigation Flow
+
+```
+Home Page (HomeView)
+    ↓ [Click "Task Manager"]
+Task Management Page (TaskView)
+    ↑ [Click "← Back"]
+```
+
+- Application starts on the Home page
+- Users navigate to Task Manager to manage tasks
+- Back button returns to Home page
+- All task data persists across navigation
 
 ## Installation
 

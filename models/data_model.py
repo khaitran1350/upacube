@@ -78,10 +78,21 @@ class DataModel(QObject):
     # --- tasks API --------------------------------------------------
     def add_task(self, title: str) -> Task | None:
         """Add a new Task and persist changes."""
-        title = title.strip()
-        if not title:
-            return None
-        task = Task(id=self._next_id, title=title)
+        # Support passing a dict with extra fields
+        if isinstance(title, dict):
+            data = title
+            title_text = str(data.get('title', '')).strip()
+            if not title_text:
+                return None
+            description = str(data.get('description', ''))
+            deadline = data.get('deadline')
+            priority = str(data.get('priority', 'Normal'))
+            task = Task(id=self._next_id, title=title_text, description=description, deadline=deadline, priority=priority)
+        else:
+            title_text = str(title).strip()
+            if not title_text:
+                return None
+            task = Task(id=self._next_id, title=title_text)
         self._next_id += 1
         self._tasks.append(task)
         self._save()

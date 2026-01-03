@@ -11,11 +11,10 @@ view = MainView()
 controller = MainController(model, view)
 
 buttons = [
-    ('Add', view.add_button),
-    ('Process', view.process_button),
-    ('Toggle', view.toggle_button),
-    ('Remove', view.remove_button),
-    ('Clear', view.clear_button),
+    ('Add', view.task_view.add_button),
+    ('Toggle', view.task_view.toggle_button),
+    ('Remove', view.task_view.remove_button),
+    ('Clear', view.task_view.clear_button),
 ]
 
 print('Starting button click simulation')
@@ -24,7 +23,7 @@ for name, btn in buttons:
         print(f'Clicking: {name}')
         # ensure input for Add
         if name == 'Add':
-            view.input_field.setText('simulated')
+            view.task_view.input_field.setText('simulated')
         btn.click()
         print(f'Clicked: {name} ok')
     except Exception:
@@ -33,4 +32,3 @@ for name, btn in buttons:
 
 print('Simulation finished')
 app.quit()
-
