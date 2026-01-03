@@ -28,9 +28,10 @@ class MainView(QMainWindow):
     def init_ui(self):
         """Initialize the main window with page navigation"""
         self.setWindowTitle("UpaCube - Task Manager")
+        # smaller default geometry for a compact view
         self.setGeometry(100, 100, 700, 550)
 
-        # Create stacked widget to hold different pages
+        # Create stacked widget to hold different   pages
         self.stacked_widget = QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
 
