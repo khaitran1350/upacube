@@ -138,3 +138,34 @@ class DataModel(QObject):
             return self._tasks[index]
         except Exception:
             return None
+
+    def update_task_by_index(self, index: int, data: dict) -> Task | None:
+        """Update a task's fields by list index using keys from data dict.
+
+        Supported keys: title, description, deadline, priority, completed
+        Returns the updated Task or None if index invalid.
+        """
+        try:
+            task = self._tasks[index]
+        except Exception:
+            return None
+
+        # update known fields if present
+        if 'title' in data:
+            task.title = str(data.get('title', task.title))
+        if 'description' in data:
+            task.description = str(data.get('description', task.description))
+        if 'deadline' in data:
+            task.deadline = data.get('deadline')
+        if 'priority' in data:
+            task.priority = str(data.get('priority', task.priority))
+        if 'completed' in data:
+            try:
+                task.completed = bool(data.get('completed'))
+            except Exception:
+                pass
+
+        # persist and notify
+        self._save()
+        self.tasks_changed.emit()
+        return task

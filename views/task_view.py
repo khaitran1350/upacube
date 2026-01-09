@@ -5,9 +5,12 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QListWidget, QTextEdit, QListWidgetItem, QSplitter
 )
-from PyQt6.QtCore import pyqtSignal, Qt
+from PyQt6.QtCore import pyqtSignal, Qt, QDate
 from PyQt6.QtGui import QColor
 from .add_task_dialog import AddTaskDialog
+from .task_detail_dialog import TaskDetailDialog
+import os
+from datetime import datetime, timedelta
 
 
 class TaskView(QWidget):
@@ -19,14 +22,24 @@ class TaskView(QWidget):
     # Signals for user actions
     add_task_requested = pyqtSignal(object)   # payload: dict or title
     toggle_task_requested = pyqtSignal(int)  # payload: index (model index)
+    # emit edited task payload dict (includes 'index')
+    edit_task_requested = pyqtSignal(object)
     remove_task_requested = pyqtSignal(int)  # payload: index (model index)
     clear_requested = pyqtSignal()
     navigate_back = pyqtSignal()  # Signal to go back to home
 
+    # Extra role to store full task details on list items
+    DETAIL_ROLE = int(Qt.ItemDataRole.UserRole) + 1
+
     def __init__(self):
         super().__init__()
         self._suppress_item_change = False
+        # animation state and selection suppression (widget created in init_ui)
+        self._details_anim = None
+        self._suppress_selection_change = False
+        self._last_detail_index = None
         self.init_ui()
+        # The global stylesheet is applied in MainView, so no need to apply here.
 
     def init_ui(self):
         """Initialize the user interface"""
@@ -37,24 +50,12 @@ class TaskView(QWidget):
         header_layout = QHBoxLayout()
 
         back_button = QPushButton("← Back")
-        back_button.setStyleSheet("""
-            QPushButton {
-                background-color: #95a5a6;
-                color: white;
-                font-size: 14px;
-                padding: 8px 16px;
-                border: none;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #7f8c8d;
-            }
-        """)
+        back_button.setObjectName("backButton")
         back_button.clicked.connect(lambda: self.navigate_back.emit())
         header_layout.addWidget(back_button)
 
         title_label = QLabel("Task Manager")
-        title_label.setStyleSheet("font-size: 18px; font-weight: bold; padding: 10px;")
+        title_label.setObjectName("titleLabel")
         header_layout.addWidget(title_label)
         header_layout.addStretch()
 
@@ -63,6 +64,7 @@ class TaskView(QWidget):
         # Add button only (use dialog for full form)
         input_layout = QHBoxLayout()
         self.add_button = QPushButton("Add Task")
+        self.add_button.setObjectName("addButton")
         input_layout.addStretch()
         input_layout.addWidget(self.add_button)
         main_layout.addLayout(input_layout)
@@ -73,19 +75,17 @@ class TaskView(QWidget):
         pending_widget = QWidget()
         pending_layout = QVBoxLayout(pending_widget)
         pending_label = QLabel("Pending")
-        pending_label.setStyleSheet("font-weight: bold; padding: 6px; font-size: 14px;")
+        pending_label.setObjectName("headerLabel")
         pending_layout.addWidget(pending_label)
         self.pending_list = QListWidget()
-        self.pending_list.setStyleSheet('font-size: 12px;')
         pending_layout.addWidget(self.pending_list)
 
         done_widget = QWidget()
         done_layout = QVBoxLayout(done_widget)
         done_label = QLabel("Done")
-        done_label.setStyleSheet("font-weight: bold; padding: 6px; font-size: 14px;")
+        done_label.setObjectName("headerLabel")
         done_layout.addWidget(done_label)
         self.done_list = QListWidget()
-        self.done_list.setStyleSheet('font-size: 12px;')
         done_layout.addWidget(self.done_list)
 
         splitter.addWidget(pending_widget)
@@ -98,12 +98,18 @@ class TaskView(QWidget):
         # listen for checkbox changes (user toggles) on both lists
         self.pending_list.itemChanged.connect(self._on_item_changed)
         self.done_list.itemChanged.connect(self._on_item_changed)
+        # show details dialog on item click
+        self.pending_list.itemClicked.connect(self._on_item_clicked)
+        self.done_list.itemClicked.connect(self._on_item_clicked)
 
         # Buttons row
         button_layout = QHBoxLayout()
         self.toggle_button = QPushButton("Toggle Done")
+        self.toggle_button.setObjectName("toggleButton")
         self.remove_button = QPushButton("Remove")
+        self.remove_button.setObjectName("removeButton")
         self.clear_button = QPushButton("Clear All")
+        self.clear_button.setObjectName("clearButton")
         button_layout.addWidget(self.toggle_button)
         button_layout.addWidget(self.remove_button)
         button_layout.addWidget(self.clear_button)
@@ -113,6 +119,7 @@ class TaskView(QWidget):
         self.status_text = QTextEdit()
         self.status_text.setReadOnly(True)
         self.status_text.setMaximumHeight(120)
+        self.status_text.setObjectName("statusText")
         main_layout.addWidget(self.status_text)
 
         # Connect UI actions
@@ -122,8 +129,6 @@ class TaskView(QWidget):
         self.remove_button.clicked.connect(self._on_remove_clicked)
         self.clear_button.clicked.connect(lambda checked=False: self.clear_requested.emit())
 
-        # Apply the preferred theme
-        self.apply_light_theme()
 
     # --- UI event handlers -------------------------------------------
     def _on_add_clicked(self, checked=False):
@@ -169,6 +174,23 @@ class TaskView(QWidget):
         if model_index is not None:
             self.toggle_task_requested.emit(model_index)
 
+    def _on_item_clicked(self, item: QListWidgetItem):
+        """Open TaskDetailDialog for the clicked item."""
+        if item is None:
+            return
+        data = item.data(self.DETAIL_ROLE)
+        if data is None:
+            # fallback minimal data
+            data = {'title': item.text(), 'description': item.toolTip() or ''}
+
+        dlg = TaskDetailDialog(self, task_data=data)
+        dlg.edit_submitted.connect(lambda payload: self.edit_task_requested.emit(payload) if hasattr(self, 'edit_task_requested') else None)
+        dlg.exec()
+
+    def _on_current_item_changed(self, current, previous):
+        """Keyboard navigation — leave as no-op with dialog-based details."""
+        return
+
     # --- view update methods ---------------------------------------
     def update_tasks(self, tasks):
         """Repopulate the tasks lists from model data.
@@ -210,6 +232,8 @@ class TaskView(QWidget):
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
             # attach model index as UserRole so selection maps back to model
             item.setData(Qt.ItemDataRole.UserRole, idx)
+            # also attach full details under DETAIL_ROLE so the view can display them
+            item.setData(self.DETAIL_ROLE, {'title': title, 'description': description, 'deadline': deadline, 'priority': priority, 'completed': completed, 'index': idx})
             # set check state and visual cues
             if completed:
                 item.setCheckState(Qt.CheckState.Checked)
@@ -281,82 +305,4 @@ class TaskView(QWidget):
         except Exception:
             return None
         return None
-
-    # --- Theme ------------------------------------------------------
-    def apply_light_theme(self):
-        """Apply a light theme stylesheet to the task view."""
-        style = """
-        /* Base colors */
-        QWidget {
-            background-color: #fafafa;
-            color: #222222;
-            font-family: Segoe UI, Arial, Helvetica, sans-serif;
-            font-size: 12px;
-        }
-        QLabel { color: #111111; }
-        
-        /* Input fields */
-        QLineEdit {
-            background-color: white;
-            color: #222;
-            border: 1px solid #d1d1d1;
-            border-radius: 4px;
-            padding: 6px 8px;
-            font-size: 13px;
-        }
-        QLineEdit:focus {
-            border: 1px solid #3498db;
-        }
-        
-        /* Buttons */
-        QPushButton {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 8px 16px;
-            font-size: 13px;
-            font-weight: 500;
-        }
-        QPushButton:hover {
-            background-color: #2980b9;
-        }
-        QPushButton:pressed {
-            background-color: #21618c;
-        }
-        QPushButton:disabled {
-            background-color: #bdc3c7;
-        }
-        
-        /* List */
-        QListWidget {
-            background-color: white;
-            border: 1px solid #d1d1d1;
-            border-radius: 4px;
-            padding: 4px;
-        }
-        QListWidget::item {
-            padding: 6px;
-            border-bottom: 1px solid #ecf0f1;
-        }
-        QListWidget::item:selected {
-            background-color: #e8f4f8;
-            color: #222;
-        }
-        QListWidget::item:hover {
-            background-color: #f0f8ff;
-        }
-        
-        /* Text edit (status) */
-        QTextEdit {
-            background-color: white;
-            color: #222;
-            border: 1px solid #d1d1d1;
-            border-radius: 4px;
-            padding: 8px;
-            font-size: 11px;
-            font-family: Consolas, Courier, monospace;
-        }
-        """
-        self.setStyleSheet(style)
 

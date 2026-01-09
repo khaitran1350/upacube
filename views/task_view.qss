@@ -1,0 +1,72 @@
+/* Base colors */
+QWidget {
+    background-color: #fafafa;
+    color: #222222;
+    font-family: Segoe UI, Arial, Helvetica, sans-serif;
+    font-size: 12px;
+}
+QLabel { color: #111111; }
+
+/* Input fields */
+QLineEdit {
+    background-color: white;
+    color: #222;
+    border: 1px solid #d1d1d1;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 13px;
+}
+QLineEdit:focus {
+    border: 1px solid #3498db;
+}
+
+/* Buttons */
+QPushButton {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+}
+QPushButton:hover {
+    background-color: #2980b9;
+}
+QPushButton:pressed {
+    background-color: #21618c;
+}
+QPushButton:disabled {
+    background-color: #bdc3c7;
+}
+
+/* List */
+QListWidget {
+    background-color: white;
+    border: 1px solid #d1d1d1;
+    border-radius: 4px;
+    padding: 4px;
+}
+QListWidget::item {
+    padding: 6px;
+    border-bottom: 1px solid #ecf0f1;
+}
+QListWidget::item:selected {
+    background-color: #e8f4f8;
+    color: #222;
+}
+QListWidget::item:hover {
+    background-color: #f0f8ff;
+}
+
+/* Text edit (status) */
+QTextEdit {
+    background-color: white;
+    color: #222;
+    border: 1px solid #d1d1d1;
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 11px;
+    font-family: Consolas, Courier, monospace;
+}
+

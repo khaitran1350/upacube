@@ -1,0 +1,158 @@
+/*
+ * Global QSS stylesheet for UpaCube
+ */
+
+QWidget {
+    font-family: 'Segoe UI', 'Helvetica Neue', 'Arial', sans-serif;
+    font-size: 14px;
+    background-color: #f0f2f5; /* Light gray background */
+    color: #333;
+}
+
+QMainWindow {
+    background-color: #f0f2f5;
+}
+
+/* --- Buttons --- */
+QPushButton {
+    background-color: #0078d4; /* A modern blue */
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+QPushButton:hover {
+    background-color: #005a9e;
+}
+
+QPushButton:pressed {
+    background-color: #004578;
+}
+
+QPushButton:disabled {
+    background-color: #d1d1d1;
+    color: #a1a1a1;
+}
+
+/* Specific button types */
+QPushButton#backButton {
+    background-color: #6c757d; /* Gray for secondary actions */
+}
+QPushButton#backButton:hover {
+    background-color: #5a6268;
+}
+
+QPushButton#editButton {
+    background-color: #ffc107; /* Amber for edit */
+    color: #333;
+}
+QPushButton#editButton:hover {
+    background-color: #e0a800;
+}
+
+QPushButton#removeButton {
+    background-color: #dc3545; /* Red for destructive actions */
+}
+QPushButton#removeButton:hover {
+    background-color: #c82333;
+}
+
+
+/* --- Lists --- */
+QListWidget {
+    background-color: #ffffff;
+    border: 1px solid #d1d1d1;
+    border-radius: 4px;
+    padding: 4px;
+    font-size: 14px;
+}
+
+QListWidget::item {
+    padding: 8px;
+    border-bottom: 1px solid #f0f2f5;
+}
+
+QListWidget::item:selected {
+    background-color: #e6f2ff;
+    color: #005a9e;
+    border-left: 3px solid #005a9e;
+}
+
+QListWidget::item:hover {
+    background-color: #f5f5f5;
+}
+
+
+/* --- Input Fields --- */
+QLineEdit, QTextEdit, QDateEdit, QComboBox {
+    background-color: #ffffff;
+    border: 1px solid #d1d1d1;
+    border-radius: 4px;
+    padding: 6px;
+    font-size: 14px;
+}
+
+QLineEdit:focus, QTextEdit:focus, QDateEdit:focus, QComboBox:focus {
+    border: 1px solid #0078d4;
+}
+
+QTextEdit {
+    line-height: 1.5;
+}
+
+
+/* --- Labels --- */
+QLabel {
+    background-color: transparent;
+}
+
+QLabel#titleLabel {
+    font-size: 24px;
+    font-weight: 600;
+    color: #222;
+    padding: 10px 0;
+}
+
+QLabel#headerLabel {
+    font-weight: bold;
+    padding: 6px;
+    font-size: 16px;
+    color: #333;
+    border-bottom: 2px solid #e1e4e8;
+}
+
+/* --- Dialogs --- */
+QDialog {
+    background-color: #f0f2f5;
+}
+
+/* --- TaskDetailDialog Specific Styles --- */
+#detailDialog {
+    min-width: 400px;
+}
+
+#titleLabel {
+    font-size: 22px;
+    font-weight: 600;
+    color: #1f2328;
+    padding-bottom: 8px;
+}
+
+#descriptionText {
+    font-size: 14px;
+    color: #4a5568;
+}
+
+QFormLayout QLabel {
+    font-weight: 600;
+    font-size: 14px;
+    color: #4a5568;
+    padding-top: 4px;
+}
+
+#priorityIconLabel, #deadlineIconLabel {
+    font-size: 14px;
+    font-weight: normal;
+}

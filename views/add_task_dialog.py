@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QTextEdit, QComboBox, QPushButton, QDateEdit, QDialogButtonBox
 )
-from PyQt6.QtCore import pyqtSignal, Qt
+from PyQt6.QtCore import pyqtSignal, Qt, QDate
 
 
 class AddTaskDialog(QDialog):
@@ -34,7 +34,8 @@ class AddTaskDialog(QDialog):
         self.deadline_edit = QDateEdit()
         self.deadline_edit.setCalendarPopup(True)
         self.deadline_edit.setDisplayFormat('yyyy-MM-dd')
-        self.deadline_edit.setDate(self.deadline_edit.date())
+        # default to today's date instead of an early year fallback
+        self.deadline_edit.setDate(QDate.currentDate())
         row.addWidget(self.deadline_edit)
 
         row.addWidget(QLabel("Priority"))
@@ -67,4 +68,3 @@ class AddTaskDialog(QDialog):
         }
         self.submitted.emit(payload)
         self.accept()
-

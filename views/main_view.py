@@ -3,6 +3,8 @@ Main View - Application container with page navigation
 """
 from PyQt6.QtWidgets import QMainWindow, QStackedWidget
 from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QGuiApplication
+import os
 
 from .home_view import HomeView
 from .task_view import TaskView
@@ -28,8 +30,24 @@ class MainView(QMainWindow):
     def init_ui(self):
         """Initialize the main window with page navigation"""
         self.setWindowTitle("UpaCube - Task Manager")
-        # smaller default geometry for a compact view
-        self.setGeometry(100, 100, 700, 550)
+        # preferred size for a compact view
+        width, height = 700, 550
+        # try to center on the primary screen; fallback to fixed geometry
+        try:
+            self.resize(width, height)
+            screen = QGuiApplication.primaryScreen()
+            if screen is not None:
+                screen_geom = screen.availableGeometry()
+                center_point = screen_geom.center()
+                frame = self.frameGeometry()
+                frame.moveCenter(center_point)
+                self.move(frame.topLeft())
+            else:
+                # fallback position
+                self.setGeometry(100, 100, width, height)
+        except Exception:
+            # best-effort fallback
+            self.setGeometry(100, 100, width, height)
 
         # Create stacked widget to hold different   pages
         self.stacked_widget = QStackedWidget()
@@ -101,9 +119,13 @@ class MainView(QMainWindow):
     # --- Theme ------------------------------------------------------
     def apply_global_theme(self):
         """Apply a global theme stylesheet"""
-        style = """
-        QMainWindow {
-            background-color: #fafafa;
-        }
-        """
-        self.setStyleSheet(style)
+        # Load and apply the global stylesheet
+        try:
+            qss_path = os.path.join(os.path.dirname(__file__), 'style', 'global.qss')
+            with open(qss_path, 'r', encoding='utf-8') as f:
+                style = f.read()
+            self.setStyleSheet(style)
+        except Exception as e:
+            print(f"Failed to load stylesheet: {e}")
+            # Fallback to a minimal style if loading fails
+            self.setStyleSheet("QMainWindow { background-color: #f0f2f5; }")

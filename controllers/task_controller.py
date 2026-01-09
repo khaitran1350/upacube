@@ -19,6 +19,9 @@ class TaskController:
         # Wire view signals to controller methods
         self.view.add_task_requested.connect(self.on_add_task)
         self.view.toggle_task_requested.connect(self.on_toggle_task)
+        # optionally handle edits from the view
+        if hasattr(self.view, 'edit_task_requested'):
+            self.view.edit_task_requested.connect(self.on_edit_task)
         self.view.remove_task_requested.connect(self.on_remove_task)
         self.view.clear_requested.connect(self.on_clear_requested)
 
@@ -107,3 +110,23 @@ class TaskController:
     def update_view(self):
         self.update_task_list()
         self.view.clear_status()
+
+    def on_edit_task(self, payload: Any):
+        self.logger.info('on_edit_task start: %r', payload)
+        try:
+            idx = payload.get('index') if isinstance(payload, dict) else None
+            if idx is None:
+                self.view.append_status('Edit request missing index')
+                return
+            updated = self.model.update_task_by_index(idx, payload)
+            if updated:
+                ts = datetime.now().strftime('%H:%M:%S')
+                self.view.append_status(f'[{ts}] Edited task: {updated.title}')
+                self.update_task_list()
+        except Exception:
+            self.logger.exception('on_edit_task exception')
+            try:
+                self.view.append_status('Error editing task')
+            except Exception:
+                pass
+
